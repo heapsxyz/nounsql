@@ -1,22 +1,36 @@
 {
   "name": "nounsql",
   "version": "0.1.0",
-  "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "infra:up": "docker-compose up -d",
+    "codegen": "heaps codegen --outputDir=./lib/types --storeImportPath=@/lib/store --isAsyncStore",
+    "backfill": "dotenv -e .env.local -- heaps backfill --target=NounsAuctionHouse"
   },
   "dependencies": {
+    "@heaps/engine": "file:.yalc/@heaps/engine",
+    "abitype": "^0.5.0",
+    "eslint": "8.35.0",
+    "eslint-config-next": "13.2.1",
+    "ethers": "^6.0.8",
+    "next": "13.2.1",
+    "postgres": "^3.3.3",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "zod": "^3.20.6"
+  },
+  "devDependencies": {
+    "@heaps/cli": "file:.yalc/@heaps/cli",
+    "@heaps/generators": "file:.yalc/@heaps/generators",
     "@types/node": "18.14.2",
     "@types/react": "18.0.28",
     "@types/react-dom": "18.0.11",
-    "eslint": "8.35.0",
-    "eslint-config-next": "13.2.1",
-    "next": "13.2.1",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "dotenv-cli": "^7.0.0",
+    "graphql": "^16.6.0",
+    "prettier": "^2.8.4",
     "typescript": "4.9.5"
   }
 }
