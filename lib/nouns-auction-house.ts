@@ -17,16 +17,16 @@ export async function handleAuctionCreated(event: AuctionCreated) {
             nounId,
             event.transaction.hash,
         ]);
-        return;
+        return
     }
-
     let auction = new Auction(nounId);
     auction.noun = noun.id;
-    auction.amount = BigInt(0).toString();
-    auction.startTime = event.params.startTime.toString();
-    auction.endTime = event.params.endTime.toString();
+    auction.amount = BigInt(0);
+    auction.startTime = event.params.startTime;
+    auction.endTime = event.params.endTime;
     auction.settled = false;
     await auction.save();
+    console.log('Auction created for Noun #{}', [nounId]);
 }
 
 export async function handleAuctionBid(event: AuctionBid) {
@@ -44,7 +44,7 @@ export async function handleAuctionBid(event: AuctionBid) {
         return;
     }
 
-    auction.amount = event.params.value.toString();
+    auction.amount = event.params.value;
     auction.bidder = bidder.id;
     await auction.save();
 
@@ -53,9 +53,9 @@ export async function handleAuctionBid(event: AuctionBid) {
     bid.bidder = bidder.id;
     bid.amount = auction.amount;
     bid.noun = auction.noun;
-    bid.txIndex = event.transaction.index.toString();
-    bid.blockNumber = event.block.number.toString();
-    bid.blockTimestamp = event.block.timestamp.toString();
+    bid.txIndex = event.transaction.index;
+    bid.blockNumber = event.block.number;
+    bid.blockTimestamp = event.block.timestamp;
     bid.auction = auction.id;
     await bid.save();
 }
@@ -72,7 +72,7 @@ export async function handleAuctionExtended(event: AuctionExtended) {
         return;
     }
 
-    auction.endTime = event.params.endTime.toString();
+    auction.endTime = event.params.endTime;
     await auction.save();
 }
 

@@ -193,6 +193,6 @@ export async function handleMaxQuorumVotesBPSSet(event: MaxQuorumVotesBPSSet) {
 
 export async function handleQuorumCoefficientSet(event: QuorumCoefficientSet) {
   const params = await getOrCreateDynamicQuorumParams(event.block.number);
-  params.quorumCoefficient = event.params.newQuorumCoefficient.toString();
+  params.quorumCoefficient = event.params.newQuorumCoefficient;
   await params.save();
 }

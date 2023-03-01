@@ -9,10 +9,10 @@ export async function getOrCreateAccount(
   let tokenHolder = await Account.load(id);
   if (tokenHolder == null && createIfNotFound) {
     tokenHolder = new Account(id);
-    tokenHolder.tokenBalanceRaw = BIGINT_ZERO.toString();
-    tokenHolder.tokenBalance = BIGINT_ZERO.toString();
-    tokenHolder.totalTokensHeldRaw = BIGINT_ZERO.toString();
-    tokenHolder.totalTokensHeld = BIGINT_ZERO.toString();
+    tokenHolder.tokenBalanceRaw = BIGINT_ZERO;
+    tokenHolder.tokenBalance = BIGINT_ZERO;
+    tokenHolder.totalTokensHeldRaw = BIGINT_ZERO;
+    tokenHolder.totalTokensHeld = BIGINT_ZERO;
     tokenHolder.nouns = [];
 
     if (save) {
@@ -37,13 +37,13 @@ export async function getOrCreateDelegateWithNullOption(
   let delegate = await Delegate.load(id);
   if (delegate == null && createIfNotFound) {
     delegate = new Delegate(id);
-    delegate.delegatedVotesRaw = BIGINT_ZERO.toString();
-    delegate.delegatedVotes = BIGINT_ZERO.toString();
+    delegate.delegatedVotesRaw = BIGINT_ZERO;
+    delegate.delegatedVotes = BIGINT_ZERO;
     delegate.tokenHoldersRepresentedAmount = 0;
     delegate.nounsRepresented = [];
     if (id != ZERO_ADDRESS) {
       let governance = await getGovernanceEntity();
-      governance.totalDelegates = (BigInt(governance.totalDelegates) + BIGINT_ONE).toString();
+      governance.totalDelegates = governance.totalDelegates + BIGINT_ONE
       await governance.save();
     }
     if (save) {
@@ -83,7 +83,7 @@ export async function getOrCreateProposal(
 
     let governance = await getGovernanceEntity();
 
-    governance.proposals = (BigInt(governance.proposals) + BIGINT_ONE).toString();
+    governance.proposals = governance.proposals + BIGINT_ONE;
     await governance.save();
 
     if (save) {
@@ -99,34 +99,34 @@ export async function getGovernanceEntity(): Promise<Governance> {
 
   if (governance == null) {
     governance = new Governance('GOVERNANCE');
-    governance.proposals = BIGINT_ZERO.toString();
-    governance.totalTokenHolders = BIGINT_ZERO.toString();
-    governance.currentTokenHolders = BIGINT_ZERO.toString();
-    governance.currentDelegates = BIGINT_ZERO.toString();
-    governance.totalDelegates = BIGINT_ZERO.toString();
-    governance.delegatedVotesRaw = BIGINT_ZERO.toString();
-    governance.delegatedVotes = BIGINT_ZERO.toString();
-    governance.proposalsQueued = BIGINT_ZERO.toString();
+    governance.proposals = BIGINT_ZERO
+    governance.totalTokenHolders = BIGINT_ZERO
+    governance.currentTokenHolders = BIGINT_ZERO
+    governance.currentDelegates = BIGINT_ZERO
+    governance.totalDelegates = BIGINT_ZERO
+    governance.delegatedVotesRaw = BIGINT_ZERO
+    governance.delegatedVotes = BIGINT_ZERO
+    governance.proposalsQueued = BIGINT_ZERO
   }
 
   return governance;
 }
 
-export async function getOrCreateDynamicQuorumParams(block: BigInt | null = null): Promise<DynamicQuorumParams> {
+export async function getOrCreateDynamicQuorumParams(block: bigint | null = null): Promise<DynamicQuorumParams> {
   let params = await DynamicQuorumParams.load('LATEST');
 
   if (params == null) {
     params = new DynamicQuorumParams('LATEST');
     params.minQuorumVotesBPS = 0;
     params.maxQuorumVotesBPS = 0;
-    params.quorumCoefficient = BIGINT_ZERO.toString();
-    params.dynamicQuorumStartBlock = block ? block.toString() : null;
+    params.quorumCoefficient = BIGINT_ZERO;
+    params.dynamicQuorumStartBlock = block
 
     await params.save();
   }
 
   if (params.dynamicQuorumStartBlock === null && block !== null) {
-    params.dynamicQuorumStartBlock = block ? block.toString() : null;
+    params.dynamicQuorumStartBlock = block;
 
     await params.save();
   }
