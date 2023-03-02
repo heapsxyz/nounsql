@@ -1,8 +1,8 @@
 import {DelegateChanged, DelegateVotesChanged, NounCreated, Transfer,} from './types/NounsToken/NounsToken';
 import {DelegationEvent, Noun, Seed, TransferEvent} from './types/schema';
-import {BIGINT_ONE, BIGINT_ZERO, ZERO_ADDRESS} from './utils/constants';
-import {getGovernanceEntity, getOrCreateAccount, getOrCreateDelegate} from './utils/helpers';
 import {log} from "@/lib/stub";
+import {getGovernanceEntity, getOrCreateAccount, getOrCreateDelegate} from "@/lib/utils/helpers";
+import {BIGINT_ONE, BIGINT_ZERO, ZERO_ADDRESS} from "@/lib/utils/constants";
 
 export async function handleNounCreated(event: NounCreated) {
     let nounId = event.params.tokenId.toString();
@@ -33,14 +33,15 @@ export async function handleDelegateChanged(event: DelegateChanged) {
     let tokenHolder = await getOrCreateAccount(event.params.delegator);
     let previousDelegate = await getOrCreateDelegate(event.params.fromDelegate);
     let newDelegate = await getOrCreateDelegate(event.params.toDelegate);
-    let accountNouns = tokenHolder.nouns;
+
+    const accountNouns = tokenHolder.nouns;
 
     tokenHolder.delegate = newDelegate.id;
     await tokenHolder.save();
 
     previousDelegate.tokenHoldersRepresentedAmount =
         previousDelegate.tokenHoldersRepresentedAmount - 1;
-    let previousNounsRepresented = previousDelegate.nounsRepresented; // Re-assignment required to update array
+    let previousNounsRepresented = previousDelegate.nounsRepresented;
     previousDelegate.nounsRepresented = previousNounsRepresented.filter(
         n => !accountNouns.includes(n),
     );
@@ -89,12 +90,11 @@ export async function handleDelegateVotesChanged(event: DelegateVotesChanged) {
     await governance.save();
 }
 
-let transferredNounId: string; // Use WebAssembly global due to lack of closure support
 export async function handleTransfer(event: Transfer) {
     let fromHolder = await getOrCreateAccount(event.params.from);
     let toHolder = await getOrCreateAccount(event.params.to);
     let governance = await getGovernanceEntity();
-    transferredNounId = event.params.tokenId.toString();
+    const transferredNounId = event.params.tokenId.toString();
 
     let transferEvent = new TransferEvent(
         event.transaction.hash + '_' + transferredNounId,
@@ -102,8 +102,8 @@ export async function handleTransfer(event: Transfer) {
     transferEvent.blockNumber = event.block.number;
     transferEvent.blockTimestamp = event.block.timestamp;
     transferEvent.noun = event.params.tokenId.toString();
-    transferEvent.previousHolder = fromHolder.id;
-    transferEvent.newHolder = toHolder.id;
+    transferEvent.previousHolder = fromHolder.id.toString();
+    transferEvent.newHolder = toHolder.id.toString();
     await transferEvent.save();
 
     // fromHolder
@@ -126,33 +126,33 @@ export async function handleTransfer(event: Transfer) {
             await fromHolderDelegate.save();
         }
 
-        if (BigInt(fromHolder.tokenBalanceRaw) < BIGINT_ZERO) {
+        if (fromHolder.tokenBalanceRaw < BIGINT_ZERO) {
             log.error('Negative balance on holder {} with balance {}', [
                 fromHolder.id,
                 fromHolder.tokenBalanceRaw.toString(),
             ]);
         }
 
-        if (BigInt(fromHolder.tokenBalanceRaw) == BIGINT_ZERO && BigInt(fromHolderPreviousBalance) > BIGINT_ZERO) {
+        if (fromHolder.tokenBalanceRaw == BIGINT_ZERO && fromHolderPreviousBalance > BIGINT_ZERO) {
             governance.currentTokenHolders = governance.currentTokenHolders - BIGINT_ONE;
-            await governance.save();
+            governance.save();
 
             fromHolder.delegate = null;
         } else if (
-            BigInt(fromHolder.tokenBalanceRaw) > BIGINT_ZERO &&
-            BigInt(fromHolderPreviousBalance) == BIGINT_ZERO
+            fromHolder.tokenBalanceRaw > BIGINT_ZERO &&
+            fromHolderPreviousBalance == BIGINT_ZERO
         ) {
             governance.currentTokenHolders = governance.currentTokenHolders + BIGINT_ONE;
-            await governance.save();
+            governance.save();
         }
 
-        await fromHolder.save();
+        fromHolder.save();
     }
 
     // toHolder
     if (event.params.to == ZERO_ADDRESS) {
-        governance.totalTokenHolders = governance.totalTokenHolders - BIGINT_ONE;
-        await governance.save();
+        governance.totalTokenHolders = governance.totalTokenHolders + BIGINT_ONE;
+        governance.save();
     }
 
     let delegateChangedEvent = new DelegationEvent(
@@ -162,12 +162,12 @@ export async function handleTransfer(event: Transfer) {
     delegateChangedEvent.blockTimestamp = event.block.timestamp;
     delegateChangedEvent.noun = event.params.tokenId.toString();
     delegateChangedEvent.previousDelegate = fromHolder.delegate
-        ? fromHolder.delegate.toString()
+        ? fromHolder.delegate!.toString()
         : fromHolder.id.toString();
     delegateChangedEvent.newDelegate = toHolder.delegate
         ? toHolder.delegate!.toString()
         : toHolder.id.toString();
-    await delegateChangedEvent.save();
+    delegateChangedEvent.save();
 
     let toHolderDelegate = await getOrCreateDelegate(toHolder.delegate ? toHolder.delegate! : toHolder.id);
     let toHolderNounsRepresented = toHolderDelegate.nounsRepresented; // Re-assignment required to update array
@@ -176,16 +176,16 @@ export async function handleTransfer(event: Transfer) {
     await toHolderDelegate.save();
 
     let toHolderPreviousBalance = toHolder.tokenBalanceRaw;
-    toHolder.tokenBalanceRaw = toHolder.tokenBalanceRaw - BIGINT_ONE;
+    toHolder.tokenBalanceRaw = toHolder.tokenBalanceRaw + BIGINT_ONE;
     toHolder.tokenBalance = toHolder.tokenBalanceRaw;
-    toHolder.totalTokensHeldRaw = toHolder.totalTokensHeldRaw - BIGINT_ONE;
+    toHolder.totalTokensHeldRaw = toHolder.totalTokensHeldRaw + BIGINT_ONE;
     toHolder.totalTokensHeld = toHolder.totalTokensHeldRaw;
     let toHolderNouns = toHolder.nouns; // Re-assignment required to update array
     toHolderNouns.push(event.params.tokenId.toString());
     toHolder.nouns = toHolderNouns;
 
-    if (BigInt(toHolder.tokenBalanceRaw) == BIGINT_ZERO && toHolderPreviousBalance > BIGINT_ZERO) {
-        governance.currentTokenHolders = governance.currentTokenHolders  - BIGINT_ONE;
+    if (toHolder.tokenBalanceRaw == BIGINT_ZERO && toHolderPreviousBalance > BIGINT_ZERO) {
+        governance.currentTokenHolders = governance.currentTokenHolders + BIGINT_ONE;
         await governance.save();
     } else if (toHolder.tokenBalanceRaw > BIGINT_ZERO && toHolderPreviousBalance == BIGINT_ZERO) {
         governance.currentTokenHolders = governance.currentTokenHolders + BIGINT_ONE;
@@ -201,6 +201,5 @@ export async function handleTransfer(event: Transfer) {
 
     noun.owner = toHolder.id;
     await noun.save();
-
     await toHolder.save();
 }
