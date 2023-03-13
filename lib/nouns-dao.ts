@@ -8,7 +8,7 @@ import {
   ProposalVetoed,
   QuorumCoefficientSet,
   VoteCast,
-} from './types/NounsDAO/NounsDAO';
+} from "./types/NounsDAO/NounsDAO";
 import {
   getGovernanceEntity,
   getOrCreateDelegate,
@@ -16,7 +16,7 @@ import {
   getOrCreateDynamicQuorumParams,
   getOrCreateProposal,
   getOrCreateVote,
-} from './utils/helpers';
+} from "./utils/helpers";
 import {
   BIGINT_ONE,
   BIGINT_ZERO,
@@ -26,20 +26,23 @@ import {
   STATUS_PENDING,
   STATUS_QUEUED,
   STATUS_VETOED,
-} from './utils/constants';
-import {dynamicQuorumVotes} from './utils/dynamicQuorum';
-import {log} from "@/lib/stub";
+} from "./utils/constants";
+import {dynamicQuorumVotes} from "./utils/dynamicQuorum";
+import {log} from "./stub";
 
 export async function handleProposalCreatedWithRequirements(
-  event: ProposalCreatedWithRequirements,
+    event: ProposalCreatedWithRequirements
 ) {
   let proposal = await getOrCreateProposal(event.params.id.toString());
-  let proposer = await getOrCreateDelegateWithNullOption(event.params.proposer, false);
+  let proposer = await getOrCreateDelegateWithNullOption(
+      event.params.proposer,
+      false
+  );
 
   // Check if the proposer was a delegate already accounted for, if not we should log an error
   // since it shouldn't be possible for a delegate to propose anything without first being 'created'
   if (proposer == null) {
-    log.error('Delegate {} not found on ProposalCreated. tx_hash: {}', [
+    log.error("Delegate {} not found on ProposalCreated. tx_hash: {}", [
       event.params.proposer,
       event.transaction.hash,
     ]);
@@ -48,21 +51,22 @@ export async function handleProposalCreatedWithRequirements(
   proposer = await getOrCreateDelegate(event.params.proposer);
   proposal.proposer = proposer.id;
   proposal.targets = event.params.targets.concat();
-  proposal.values = event.params.values.map((value) => value.toString());
+  proposal.values = event.params.values.concat();
   proposal.signatures = event.params.signatures.concat();
-  proposal.calldatas = event.params.calldatas.map((calldata) => calldata.toString());
-  proposal.createdTimestamp = event.block.timestamp.toString();
-  proposal.createdBlock = event.block.number.toString();
-  proposal.createdTransactionHash = event.transaction.hash;
-  proposal.startBlock = event.params.startBlock.toString();
-  proposal.endBlock = event.params.endBlock.toString();
-  proposal.proposalThreshold = event.params.proposalThreshold.toString();
-  proposal.quorumVotes = event.params.quorumVotes.toString();
-  proposal.forVotes = BIGINT_ZERO.toString();
-  proposal.againstVotes = BIGINT_ZERO.toString();
-  proposal.abstainVotes = BIGINT_ZERO.toString();
-  proposal.description = event.params.description.split('\\n').join('\n'); // The Graph's AssemblyScript version does not support string.replace
-  proposal.status = event.block.number >= BigInt(proposal.startBlock) ? STATUS_ACTIVE : STATUS_PENDING;
+  proposal.calldatas = event.params.calldatas.map((c) => c.toString());
+  proposal.createdTimestamp = event.block.timestamp;
+  proposal.createdBlock = event.block.number;
+  proposal.createdTransactionHash = "hash-" + event.transaction.hash;
+  proposal.startBlock = event.params.startBlock;
+  proposal.endBlock = event.params.endBlock;
+  proposal.proposalThreshold = event.params.proposalThreshold;
+  proposal.quorumVotes = event.params.quorumVotes;
+  proposal.forVotes = BIGINT_ZERO;
+  proposal.againstVotes = BIGINT_ZERO;
+  proposal.abstainVotes = BIGINT_ZERO;
+  proposal.description = event.params.description.split("\\n").join("\n"); // The Graph's AssemblyScript version does not support string.replace
+  proposal.status =
+      event.block.number >= proposal.startBlock ? STATUS_ACTIVE : STATUS_PENDING;
 
   // Storing state for dynamic quorum calculations
   // Doing these for V1 props as well to avoid making these fields optional + avoid missing required field warnings
@@ -96,10 +100,10 @@ export async function handleProposalQueued(event: ProposalQueued) {
   let proposal = await getOrCreateProposal(event.params.id.toString());
 
   proposal.status = STATUS_QUEUED;
-  proposal.executionETA = event.params.eta.toString();
+  proposal.executionETA = event.params.eta;
   await proposal.save();
 
-  governance.proposalsQueued = (BigInt(governance.proposalsQueued) - BIGINT_ONE).toString();
+  governance.proposalsQueued = governance.proposalsQueued + BIGINT_ONE;
   await governance.save();
 }
 
@@ -111,22 +115,25 @@ export async function handleProposalExecuted(event: ProposalExecuted) {
   proposal.executionETA = null;
   await proposal.save();
 
-  governance.proposalsQueued = (BigInt(governance.proposalsQueued) - BIGINT_ONE).toString();
+  governance.proposalsQueued = governance.proposalsQueued - BIGINT_ONE;
   await governance.save();
 }
 
 export async function handleVoteCast(event: VoteCast) {
   let proposal = await getOrCreateProposal(event.params.proposalId.toString());
   let voteId = event.params.voter
-    .concat('-')
-    .concat(event.params.proposalId.toString());
+      .concat("-")
+      .concat(event.params.proposalId.toString());
   let vote = await getOrCreateVote(voteId);
-  let voter = await getOrCreateDelegateWithNullOption(event.params.voter, false);
+  let voter = await getOrCreateDelegateWithNullOption(
+      event.params.voter,
+      false
+  );
 
   // Check if the voter was a delegate already accounted for, if not we should log an error
   // since it shouldn't be possible for a delegate to vote without first being 'created'
   if (voter == null) {
-    log.error('Delegate {} not found on VoteCast. tx_hash: {}', [
+    log.error("Delegate {} not found on VoteCast. tx_hash: {}", [
       event.params.voter,
       event.transaction.hash,
     ]);
@@ -137,40 +144,40 @@ export async function handleVoteCast(event: VoteCast) {
 
   vote.proposal = proposal.id;
   vote.voter = voter.id;
-  vote.votesRaw = event.params.votes.toString();
-  vote.votes = event.params.votes.toString();
+  vote.votesRaw = event.params.votes;
+  vote.votes = event.params.votes;
   vote.support = event.params.support == 1;
-  vote.supportDetailed = event.params.support;
+  vote.supportDetailed = Number(event.params.support);
   vote.nouns = voter.nounsRepresented;
-  vote.blockNumber = event.block.number.toString();
+  vote.blockNumber = event.block.number;
 
-  if (event.params.reason != '') {
+  if (event.params.reason != "") {
     vote.reason = event.params.reason;
   }
 
   await vote.save();
 
   if (event.params.support == 0) {
-    proposal.againstVotes = (BigInt(proposal.againstVotes) + BigInt(event.params.votes)).toString();
+    proposal.againstVotes = proposal.againstVotes + event.params.votes;
   } else if (event.params.support == 1) {
-    proposal.forVotes = (BigInt(proposal.forVotes) + event.params.votes).toString();
+    proposal.forVotes = proposal.forVotes + event.params.votes;
   } else if (event.params.support == 2) {
-    proposal.abstainVotes = (BigInt(proposal.abstainVotes) + event.params.votes).toString();
+    proposal.abstainVotes = proposal.abstainVotes + event.params.votes;
   }
 
   const dqParams = await getOrCreateDynamicQuorumParams();
   const usingDynamicQuorum =
-    dqParams.dynamicQuorumStartBlock !== null &&
-    BigInt(dqParams.dynamicQuorumStartBlock) < BigInt(proposal.createdBlock);
+      dqParams.dynamicQuorumStartBlock !== null &&
+      dqParams.dynamicQuorumStartBlock < proposal.createdBlock;
 
   if (usingDynamicQuorum) {
     proposal.quorumVotes = dynamicQuorumVotes(
-      BigInt(proposal.againstVotes),
-      BigInt(proposal.totalSupply),
-      Number(proposal.minQuorumVotesBPS),
-      Number(proposal.maxQuorumVotesBPS),
-      BigInt(proposal.quorumCoefficient),
-    ).toString();
+        proposal.againstVotes,
+        proposal.totalSupply,
+        proposal.minQuorumVotesBPS,
+        proposal.maxQuorumVotesBPS,
+        proposal.quorumCoefficient
+    );
   }
 
   if (proposal.status == STATUS_PENDING) {
@@ -182,7 +189,7 @@ export async function handleVoteCast(event: VoteCast) {
 export async function handleMinQuorumVotesBPSSet(event: MinQuorumVotesBPSSet) {
   const params = await getOrCreateDynamicQuorumParams(event.block.number);
   params.minQuorumVotesBPS = event.params.newMinQuorumVotesBPS;
-  await params.save();
+  params.save();
 }
 
 export async function handleMaxQuorumVotesBPSSet(event: MaxQuorumVotesBPSSet) {
@@ -193,6 +200,6 @@ export async function handleMaxQuorumVotesBPSSet(event: MaxQuorumVotesBPSSet) {
 
 export async function handleQuorumCoefficientSet(event: QuorumCoefficientSet) {
   const params = await getOrCreateDynamicQuorumParams(event.block.number);
-  params.quorumCoefficient = event.params.newQuorumCoefficient;
+  params.quorumCoefficient = BigInt(event.params.newQuorumCoefficient);
   await params.save();
 }

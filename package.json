@@ -8,7 +8,7 @@
     "lint": "next lint",
     "infra:up": "docker-compose up -d",
     "codegen": "heaps codegen --outputDir=./lib/types --storeImportPath=@/lib/store --isAsyncStore",
-    "backfill": "dotenv -e .env.local -- heaps backfill --target=NounsToken"
+    "backfill": "dotenv -e .env.local -- heaps backfill"
   },
   "dependencies": {
     "@heaps/engine": "file:.yalc/@heaps/engine",

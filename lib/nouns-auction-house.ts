@@ -3,22 +3,26 @@ import {
     AuctionCreated,
     AuctionExtended,
     AuctionSettled,
-} from './types/NounsAuctionHouse/NounsAuctionHouse';
-import {Auction, Bid, Noun} from './types/schema';
-import {getOrCreateAccount} from './utils/helpers';
+} from "./types/NounsAuctionHouse/NounsAuctionHouse";
+import {Auction, Bid, Noun} from "./types/schema";
+import {getOrCreateAccount} from "./utils/helpers";
 import {log} from "@/lib/stub";
 
-export async function handleAuctionCreated(event: AuctionCreated) {
+
+export async function handleAuctionCreated(
+    event: AuctionCreated
+): Promise<void> {
     let nounId = event.params.nounId.toString();
 
     let noun = await Noun.load(nounId);
     if (noun == null) {
-        log.error('[handleAuctionCreated] Noun #{} not found. Hash: {}', [
+        log.error("[handleAuctionCreated] Noun #{} not found. Hash: {}", [
             nounId,
             event.transaction.hash,
         ]);
-        return
+        return;
     }
+
     let auction = new Auction(nounId);
     auction.noun = noun.id;
     auction.amount = BigInt(0);
@@ -26,10 +30,9 @@ export async function handleAuctionCreated(event: AuctionCreated) {
     auction.endTime = event.params.endTime;
     auction.settled = false;
     await auction.save();
-    console.log('Auction created for Noun #{}', [nounId]);
 }
 
-export async function handleAuctionBid(event: AuctionBid) {
+export async function handleAuctionBid(event: AuctionBid): Promise<void> {
     let nounId = event.params.nounId.toString();
     let bidderAddress = event.params.sender;
 
@@ -37,7 +40,7 @@ export async function handleAuctionBid(event: AuctionBid) {
 
     let auction = await Auction.load(nounId);
     if (auction == null) {
-        log.error('[handleAuctionBid] Auction not found for Noun #{}. Hash: {}', [
+        log.error("[handleAuctionBid] Auction not found for Noun #{}. Hash: {}", [
             nounId,
             event.transaction.hash,
         ]);
@@ -46,6 +49,7 @@ export async function handleAuctionBid(event: AuctionBid) {
 
     auction.amount = event.params.value;
     auction.bidder = bidder.id;
+
     await auction.save();
 
     // Save Bid
@@ -60,15 +64,17 @@ export async function handleAuctionBid(event: AuctionBid) {
     await bid.save();
 }
 
-export async function handleAuctionExtended(event: AuctionExtended) {
+export async function handleAuctionExtended(
+    event: AuctionExtended
+): Promise<void> {
     let nounId = event.params.nounId.toString();
 
     let auction = await Auction.load(nounId);
     if (auction == null) {
-        log.error('[handleAuctionExtended] Auction not found for Noun #{}. Hash: {}', [
-            nounId,
-            event.transaction.hash,
-        ]);
+        log.error(
+            "[handleAuctionExtended] Auction not found for Noun #{}. Hash: {}",
+            [nounId, event.transaction.hash]
+        );
         return;
     }
 
@@ -76,15 +82,17 @@ export async function handleAuctionExtended(event: AuctionExtended) {
     await auction.save();
 }
 
-export async function handleAuctionSettled(event: AuctionSettled) {
+export async function handleAuctionSettled(
+    event: AuctionSettled
+): Promise<void> {
     let nounId = event.params.nounId.toString();
 
     let auction = await Auction.load(nounId);
     if (auction == null) {
-        log.error('[handleAuctionSettled] Auction not found for Noun #{}. Hash: {}', [
-            nounId,
-            event.transaction.hash,
-        ]);
+        log.error(
+            "[handleAuctionSettled] Auction not found for Noun #{}. Hash: {}",
+            [nounId, event.transaction.hash]
+        );
         return;
     }
 
